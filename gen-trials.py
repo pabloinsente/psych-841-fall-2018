@@ -22,25 +22,21 @@ Output:
 # parameters
 
 # number of trials
-num_trials_t = 220
-num_trials_s = 100
-num_trials_v = 120
-# trial index
+num_trials_t = 220 # total
+num_trials_s = 100 # stable - as a second block
+num_trials_v = 120 # volatile - volatile first condition
+# 1.trial index
 trial_index = range(220)
 
-# block
-block = ["first", "second"]
+# 2.block
+block = ["first"]*num_trials_v+["second"]*num_trials_s
 
-# sub-blocks
-sub_blocks_first = [""]
-sub_blocks_second = [""]
+# 3.conditions
+condition_vf = ["vf"]*num_trials_t
+condition_sf = ["sf"]*num_trials_t
 
-# conditions
-conditions = ["vf", "sf"]
-
-# stimuli position
+# 3.stimuli position
 stimuli = [["green","blue"]]*num_trials_t
-len(stimuli)
 left_pos = []
 right_pos = []
 for pair in stimuli:
@@ -48,7 +44,7 @@ for pair in stimuli:
     left_pos.append(left)
     right_pos.append(right)
 
-# targets
+# 5.targets
 def sub_blocks(green_prob, num_trials):
     """Generate sub_blocks for meta-blocks of the task.
 
@@ -64,27 +60,35 @@ def sub_blocks(green_prob, num_trials):
     target = random.sample(target, len(target))
     return target
 
-# targets volatile block
-sub_vol_1 = sub_blocks(0.7, 20)
-sub_vol_2 = sub_blocks(0.3, 30)
-sub_vol_3 = sub_blocks(0.9, 20)
-sub_vol_4 = sub_blocks(0.1, 30)
-sub_vol_5 = sub_blocks(0.7, 20)
+# targets parameters
+gren_probs_v = [0.7, 0.3, 0.9, 0.1, 0.7] # prob of green in volatile block
+gren_probs_s = [0.2, 0.8] # prob of green on stable blocks
+sub_blocks_vf = [20, 30, 20, 30, 20] # trials by sub-block volatile first
+sub_blocks_sf = [120, 100] # trials by sub-block volatile first
 
-# targets stable block
-sub_s_1 = sub_blocks(0.2, 120)
-sub_s_2 = sub_blocks(0.8, 100)
+# targets sub-blocks volatile block
+sub_vol_1 = sub_blocks(gren_probs_v[0], sub_blocks_vf[0])
+sub_vol_2 = sub_blocks(gren_probs_v[1], sub_blocks_vf[1])
+sub_vol_3 = sub_blocks(gren_probs_v[2], sub_blocks_vf[2])
+sub_vol_4 = sub_blocks(gren_probs_v[3], sub_blocks_vf[3])
+sub_vol_5 = sub_blocks(gren_probs_v[4], sub_blocks_vf[4])
 
-# target volatile first condition
+# targets sub-blocks stable block
+sub_s_1 = sub_blocks(gren_probs_s[0], sub_blocks_sf[0]) # first stable block
+sub_s_2 = sub_blocks(gren_probs_s[1], sub_blocks_sf[1]) # second stable block
+
+# 5.1 concatenate targets volatile first condition
 target_vf = sub_vol_1+sub_vol_2+sub_vol_3+sub_vol_4+sub_vol_5+sub_s_2
+# 5.2 concatenate targets stable first condition
 target_sf = sub_s_1+sub_s_2
 
-# probability of green
-############## TODO = list 220 #############
-green_prob = []
-
-# expected key
+# 6. expected key
 def expectedKey(target_condition):
+    """Generate expected key (left or right) list
+
+    Keyword arguments:
+    target_condition -- target_vf = volatile first; target_sf = stable first
+    """
     expected_key = []
     for key in zip(left_pos, target_condition):
         if key[0] == "green" and key[1] == "green":
@@ -97,12 +101,12 @@ def expectedKey(target_condition):
             expected_key.append("right")
     return expected_key
 
-# expected key for volatile first condition
+# 6.1 expected key for volatile first condition
 expected_key_vf = expectedKey(target_vf)
-# expected key for stable first condition
+# 6.2 expected key for stable first condition
 expected_key_sf = expectedKey(target_sf)
 
-# reward size
+# 7. reward size
 np.random.seed(0)
 reward_size_left = np.random.randint(99, size=(1, num_trials_t))
 reward_size_left = (reward_size_left.tolist())[0] # to strip extra brackets
@@ -110,16 +114,33 @@ np.random.seed(1)
 reward_size_right = np.random.randint(99, size=(1, num_trials_t))
 reward_size_right = (reward_size_right.tolist())[0] # to strip extra brackets
 
+# 8. probability of green
+gren_probs_v_list = [[0.7], [0.3], [0.9], [0.1], [0.7]]
+sub_blocks_vf = [20, 30, 20, 30, 20] # trials by sub-block volatile first
+green_prob_vf = [] # list prob green vf
+for pair in zip(gren_probs_v_list, sub_blocks_vf):
+    green_prob_vf.extend(pair[0]*pair[1])
+green_prob_vf.extend([0.8]*num_trials_s)
+
+green_prob_sf = [0.2]*num_trials_v+[0.8]*num_trials_s # list prob green sf
+
 ############### TODO add header ###########################
+header = ["trial_index", "block", "condition", "left_stim", "right_stim",\
+            "target_position", "expected_key", "reward_left", "reward_right",\
+            "green_probability"]
 
 # write to csv for volatile first condition
 with open("vf_trials.csv","w") as fh:
-    fh.write('\n'.join('%s, %s, %s, %s, %s, %s, %s,' % x for x in zip(trial_index, \
-            left_pos, right_pos, target_vf, expected_key_vf,\
-            reward_size_left, reward_size_right)))
+    #fh.write(",".join(header))
+    fh.write('\n'.join('%s, %s, %s, %s, %s, %s, %s, %s, %s, %s'\
+            % x for x in zip(trial_index, block, condition_vf, left_pos,\
+            right_pos, target_vf, expected_key_vf,\
+            reward_size_left, reward_size_right, green_prob_vf)))
 
-# write to csv for volatile first condition
+# write to csv for stable first condition
 with open("sf_trials.csv","w") as fh:
     fh.write('\n'.join('%s, %s, %s, %s, %s, %s, %s,' % x for x in zip(trial_index, \
-            left_pos, right_pos, target_sf, expected_key_sf,\
-            reward_size_left, reward_size_right)))
+            block, condition_sf, left_pos, right_pos, target_sf, expected_key_sf,\
+            reward_size_left, reward_size_right, green_prob_sf)))
+
+for x in
